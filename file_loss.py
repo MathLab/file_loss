@@ -1,29 +1,12 @@
 # python functions related to file loss probability calculation.
 
-import utilities
+from utilities import (window, product)
+
 
 from itertools import (cycle, islice, combinations, chain)
 import numpy as np
 from math import (factorial)
-
-def window(seq, n):
-    """
-      Implement a sliding window of size n for a sequence seq.
-
-    Args: 
-        seq (list): The sequence we want to apply the sliding window.
-        n   (int): The size of the sliding window.
-
-    Returns:
-           Returns a sliding window as a tuple.
-    """
-    it = iter(seq)
-    result = tuple(islice(it, n))
-    if len(result) == n:
-        yield result
-    for elem in it:
-        result = result[1:] + (elem,)
-        yield result
+from numpy.random import (uniform)
 
 def feasible_configurations(disk_count, chunk_count, spread_factor):
     """
@@ -186,7 +169,7 @@ def frequency(configuration, disk_count, spread_factor):
             
     return way_count
   
-def probability_file_loss(disk_count, chunk_count, spread_factor, d, disk_reliability):
+def probability_file_loss(disks, chunk_count, spread_factor, d, disk_reliability):
     """Compute the probability of file loss.
     
     Args:
@@ -200,28 +183,28 @@ def probability_file_loss(disk_count, chunk_count, spread_factor, d, disk_reliab
     """
     # First we calculate the probability that a configuration is selected.
     probability_configuration = (1.0*(factorial(spread_factor - chunk_count + 1)*factorial(chunk_count - 1))
-                              / (disk_count*factorial(spread_factor)))
+                              / (len(disks)*factorial(spread_factor)))
     
     # Then, we generate the list of all feasible configurations as a function of 
     # the number of disks, disk_count, the number of chunks, chunk_count and the spread factor.
     #configurations = list(map(lambda t: map(lambda e: e + 1, t),
     #    feasible_configurations(disk_count, chunk_count, spread_factor)))
   
-    configurations = feasible_configurations(disk_count, chunk_count, spread_factor)
+    configurations = feasible_configurations(len(disks), chunk_count, spread_factor)
 
     # Finally, for each feasible configuration where chunks are stored, we calculate the probabi-
     # lity the file is lost.
     
     # first we consider there is no redondancy
-    if disk_count >= 2*(spread_factor + 1) - chunk_count:
+    if len(disks) >= 2*(spread_factor + 1) - chunk_count:
         return probability_configuration * sum([probability_at_least_d_fail(config, d, chunk_count, disk_reliability)
                                                 for config in configurations])
     # This condition cover the case with redondancies
     else:
-        return probability_configuration * sum([frequency(config, disk_count, spread_factor)*probability_at_least_d_fail(config, d, chunk_count, disk_reliability)
+        return probability_configuration * sum([frequency(config, len(disks), spread_factor)*probability_at_least_d_fail(config, d, chunk_count, disk_reliability)
                                                for config in configurations])
 
-def probability_file_loss_matrix(disk_count, chunk_count, spread_factor, d, disk_reliability):
+def probability_file_loss_matrix(disks, chunk_count, spread_factor, d, reliability):
     """Compute the probability of file loss using a matriw formulation.
     
     Args:
@@ -235,28 +218,25 @@ def probability_file_loss_matrix(disk_count, chunk_count, spread_factor, d, disk
     """
     
     # First we calculate the probability that a configuration is selected.
-    probability_configuration = (factorial(spread_factor - chunk_count + 1) * factorial(chunk_count - 1) /
-                                 (disk_count * factorial(spread_factor)))
+    probability_configuration = (1.0*factorial(spread_factor - chunk_count + 1) * factorial(chunk_count - 1) /
+                                 (len(disks) * factorial(spread_factor)))
     
     # Then, we generate the list of all feasible configurations as a function of 
     # the number of disks, disk_count, the number of chunks, chunk_count and the spread factor.
-    configurations = feasible_configurations(disk_count, chunk_count, spread_factor)
+    configurations = feasible_configurations(len(disks), chunk_count, spread_factor)
   
     # Finally, for each feasible configuration where chunks are stored, we calculate the probabi-
     # lity the file is lost.
     
     # first we consider there is no redundancy
-    if disk_count >= 2*(spread_factor + 1) - chunk_count:
-
-        return sum([probability_configuration * 
-                    probability_at_least_d_fail_matrix(config, d, chunk_count, disk_reliability)
-                    for config in configurations])
+    if len(disks) >= 2*(spread_factor + 1) - chunk_count:
+        return probability_configuration * sum([probability_at_least_d_fail_matrix(config, d, chunk_count, reliability)
+                                                for config in configurations])
     # This condition cover the case with redundancies
     else:
-        return sum([frequency(config, disk_count, spread_factor) *
-                    probability_configuration *
-                    probability_at_least_d_fail_matrix(config, d, chunk_count, disk_reliability)
-                    for config in configurations])
+        return probability_configuration * sum([frequency(config, len(disks), spread_factor) *
+                                                probability_at_least_d_fail_matrix(config, d, chunk_count, reliability)
+                                                for config in configurations])
 
 def file_loss_delta(delta, mean_reliability, experiments, disks, chunk_count, spread_factor, d):
     """To do.
@@ -277,8 +257,39 @@ def file_loss_delta(delta, mean_reliability, experiments, disks, chunk_count, sp
     for e in experiments:
         # First we generate the list of disk reliability between mean_reliability-0.5*delta and mean_reliability-0.5*delta.
         
-        reliability = dict(zip(disks, uniform(mean_reliability-0.5*delta,mean_reliability+0.5*delta, size=len(disks))))
+        lower_bound = mean_reliability - 0.5 * delta
+        upper_bound = mean_reliability + 0.5 * delta
+
+        reliability = dict(zip(disks, uniform(low=lower_bound, high=upper_bound, size=len(disks))))
         reliability[disks[-1]] = len(disks) * mean_reliability - sum([reliability[disk] for disk in disks[:-1]])
         
         # Then we calculate the probability of file loss for the reliability list 
-        yield probability_file_loss(len(disks), chunk_count, spread_factor, d, reliability)
+        yield probability_file_loss(disks, chunk_count, spread_factor, d, reliability)
+
+def file_loss_delta_matrix(delta, mean_reliability, experiments, disks, chunk_count, spread_factor, d):
+    """To do.
+    
+    Args:
+        delta (double): 
+        mean_reliability:
+        experience_count (int):
+        disk_count (int): number of disks in the system.
+        chunk_count (int): number of chunks the file is spread into.
+        spread_factor (int): number of disks to be used after selected disk.
+        d (int): 
+        
+    Returns:
+        To do. 
+    """
+    
+    for e in experiments:
+        # First we generate the list of disk reliability between mean_reliability-0.5*delta and mean_reliability-0.5*delta.
+
+        lower_bound = mean_reliability - 0.5 * delta
+        upper_bound = mean_reliability + 0.5 * delta
+
+        reliability = dict(zip(disks, uniform(low=lower_bound, high=upper_bound , size=len(disks))))
+        reliability[disks[-1]] = len(disks) * mean_reliability - sum([reliability[disk] for disk in disks[:-1]])
+        
+        # Then we calculate the probability of file loss for the reliability list 
+        yield probability_file_loss_matrix(disks, chunk_count, spread_factor, d, reliability)
