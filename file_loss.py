@@ -2,7 +2,6 @@
 
 from utilities import (window, product)
 
-
 from itertools import (cycle, islice, combinations, chain)
 import numpy as np
 from math import (factorial)
@@ -237,59 +236,3 @@ def probability_file_loss_matrix(disks, chunk_count, spread_factor, d, reliabili
         return probability_configuration * sum([frequency(config, len(disks), spread_factor) *
                                                 probability_at_least_d_fail_matrix(config, d, chunk_count, reliability)
                                                 for config in configurations])
-
-def file_loss_delta(delta, mean_reliability, experiments, disks, chunk_count, spread_factor, d):
-    """To do.
-    
-    Args:
-        delta (double): 
-        mean_reliability:
-        experience_count (int):
-        disk_count (int): number of disks in the system.
-        chunk_count (int): number of chunks the file is spread into.
-        spread_factor (int): number of disks to be used after selected disk.
-        d (int): 
-        
-    Returns:
-        To do. 
-    """
-    
-    for e in experiments:
-        # First we generate the list of disk reliability between mean_reliability-0.5*delta and mean_reliability-0.5*delta.
-        
-        lower_bound = mean_reliability - 0.5 * delta
-        upper_bound = mean_reliability + 0.5 * delta
-
-        reliability = dict(zip(disks, uniform(low=lower_bound, high=upper_bound, size=len(disks))))
-        reliability[disks[-1]] = len(disks) * mean_reliability - sum([reliability[disk] for disk in disks[:-1]])
-        
-        # Then we calculate the probability of file loss for the reliability list 
-        yield probability_file_loss(disks, chunk_count, spread_factor, d, reliability)
-
-def file_loss_delta_matrix(delta, mean_reliability, experiments, disks, chunk_count, spread_factor, d):
-    """To do.
-    
-    Args:
-        delta (double): 
-        mean_reliability:
-        experience_count (int):
-        disk_count (int): number of disks in the system.
-        chunk_count (int): number of chunks the file is spread into.
-        spread_factor (int): number of disks to be used after selected disk.
-        d (int): 
-        
-    Returns:
-        To do. 
-    """
-    
-    for e in experiments:
-        # First we generate the list of disk reliability between mean_reliability-0.5*delta and mean_reliability-0.5*delta.
-
-        lower_bound = mean_reliability - 0.5 * delta
-        upper_bound = mean_reliability + 0.5 * delta
-
-        reliability = dict(zip(disks, uniform(low=lower_bound, high=upper_bound , size=len(disks))))
-        reliability[disks[-1]] = len(disks) * mean_reliability - sum([reliability[disk] for disk in disks[:-1]])
-        
-        # Then we calculate the probability of file loss for the reliability list 
-        yield probability_file_loss_matrix(disks, chunk_count, spread_factor, d, reliability)
