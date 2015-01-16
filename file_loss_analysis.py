@@ -3,8 +3,8 @@
 from file_loss import (probability_file_loss, probability_file_loss_matrix, 
                        probability_at_least_d_fail_equal_reliability)
 
-from random import (uniform)
 from pandas import DataFrame
+from numpy.random import (uniform)
 
 def file_loss_delta(delta, mean_reliability, experiments, disks, chunk_count, spread_factor, d):
     """To do.
