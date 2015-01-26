@@ -1,11 +1,20 @@
 # This file contains function related to the analysis of the approximation of the file loss probability
 
+
+#############################################################################################################################
+#                                                       IMPORTS                                                             #
+#############################################################################################################################
 from file_loss import (probability_file_loss, probability_file_loss_matrix, 
                        probability_at_least_d_fail_equal_reliability)
 
 from pandas import DataFrame
 from numpy.random import (uniform)
+#############################################################################################################################
 
+
+#############################################################################################################################
+#                                           FILE LOSS PROBABILITY APPROXIMATION                                             #
+#############################################################################################################################
 def file_loss_delta(delta, mean_reliability, experiments, disks, chunk_count, spread_factor, d):
     """To do.
     
@@ -117,3 +126,4 @@ def launch_experiment(disks, chunk_count, threshold_recovery, spread_factor, exp
     absolute_error_list.hist(bins=50)
     
     print("----------------------------------------------------------------------")
+#############################################################################################################################
